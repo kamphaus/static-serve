@@ -95,11 +95,14 @@ func HandleError404(error404File *string, h http.Handler) http.Handler {
 					}
 				},
 			}
+			originalHeader http.Header
 		)
 		wrapped := httpsnoop.Wrap(w, hooks)
+		CopyHeaders(originalHeader, w.Header())
 		h.ServeHTTP(wrapped, r)
 		if isError404 {
 			log.Printf("Did not find %s, serving %s instead", r.URL.Path, *error404File)
+			SetHeaders(w.Header(), originalHeader)
 			r2 := new(http.Request)
 			*r2 = *r
 			r2.URL = new(url.URL)
@@ -109,4 +112,19 @@ func HandleError404(error404File *string, h http.Handler) http.Handler {
 			h.ServeHTTP(w, r2)
 		}
 	})
+}
+
+// CopyHeaders copies http headers from source to destination, it
+// does not override, but adds multiple headers
+func CopyHeaders(dst http.Header, src http.Header) {
+	for k, vv := range src {
+		dst[k] = append(dst[k], vv...)
+	}
+}
+
+func SetHeaders(dst http.Header, src http.Header) {
+	for h := range dst {
+		dst.Del(h)
+	}
+	CopyHeaders(dst, src)
 }
