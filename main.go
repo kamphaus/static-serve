@@ -1,10 +1,12 @@
 /*
-Serve is a very simple static file server in go
+Static-serve is a very simple static file server in go
 Usage:
 	-p="8100": port to serve on
 	-d=".":    the directory of static files to host
+	-e="":     a file to serve in case of error 404
+	-l:        log access requests
 
-Serve does not show directory listings, it only serves files.
+Static-serve does not show directory listings, it only serves files.
 */
 package main
 
