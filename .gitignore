@@ -19,3 +19,4 @@ logs
 **/.nb-gradle/
 **/.nb-gradle-properties
 */.settings
+/static-serve
