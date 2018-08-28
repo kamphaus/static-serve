@@ -10,16 +10,17 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/felixge/httpsnoop"
 	"github.com/pkg/errors"
-	"fmt"
-	"strings"
 )
 
 type justFilesFilesystem struct {
@@ -46,6 +47,7 @@ func main() {
 	port := flag.String("p", "8100", "port to serve on")
 	directory := flag.String("d", ".", "the directory of static file to host")
 	error404File := flag.String("e", "", "the file to serve in case of error 404")
+	logAccessFlag := flag.Bool("l", false, "log access requests")
 	flag.Parse()
 
 	docroot, err := filepath.Abs(*directory)
@@ -53,7 +55,7 @@ func main() {
 		log.Fatal(err)
 	}
 	fs := justFilesFilesystem{http.Dir(docroot)}
-	http.Handle("/", HandleError404(error404File, http.StripPrefix("/", http.FileServer(fs))))
+	http.Handle("/", LogAccess(*logAccessFlag, HandleError404(error404File, http.StripPrefix("/", http.FileServer(fs)))))
 
 	withError404 := ""
 	if error404File != nil && *error404File != "" {
@@ -61,6 +63,43 @@ func main() {
 	}
 	log.Printf("Serving %s on HTTP port: %s%s\n", docroot, *port, withError404)
 	log.Fatal(http.ListenAndServe(":"+*port, nil))
+}
+
+func LogAccess(logAccessFlag bool, h http.Handler) http.Handler {
+	if !logAccessFlag {
+		return h
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var (
+			httpCode = http.StatusOK
+			writtenBytes int64 = 0
+			hooks = httpsnoop.Hooks{
+				WriteHeader: func(next httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
+					return func(code int) {
+						httpCode = code
+						next(code)
+					}
+				},
+				Write: func(next httpsnoop.WriteFunc) httpsnoop.WriteFunc {
+					return func(p []byte) (int, error) {
+						n, err := next(p)
+						writtenBytes += int64(n)
+						return n, err
+					}
+				},
+				ReadFrom: func(fromFunc httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
+					return func(src io.Reader) (int64, error) {
+						n, err := fromFunc(src)
+						writtenBytes += n
+						return n, err
+					}
+				},
+			}
+		)
+		wrapped := httpsnoop.Wrap(w, hooks)
+		h.ServeHTTP(wrapped, r)
+		log.Printf("%s %d %d %s", r.RemoteAddr, httpCode, writtenBytes, r.URL.Path)
+	})
 }
 
 var ignoreError404 = errors.New("ignored file")
