@@ -1,0 +1,6 @@
+github.com/felixge/httpsnoop v1.0.1 h1:lvB5Jl89CsZtGIWuTcDM1E/vkVs49/Ml7JJe07l8SPQ=
+github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
+github.com/howeyc/fsnotify v0.9.0 h1:0gtV5JmOKH4A8SsFxG2BczSeXWWPvcMT0euZt5gDAxY=
+github.com/howeyc/fsnotify v0.9.0/go.mod h1:41HzSPxBGeFRQKEEwgh49TRw/nKBsYZ2cF1OzPjSJsA=
+github.com/kamphaus/memfs v1.0.0 h1:/iQEdNrL4CZT1+DodRQZsiM8oaqOzbfoVbDqPGb2CWg=
+github.com/kamphaus/memfs v1.0.0/go.mod h1:/oqmtsJYeTS2ogXKtW8jmOp5CJBIXM6l/yHUn0K8ah0=
