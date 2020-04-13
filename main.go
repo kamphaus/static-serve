@@ -12,33 +12,64 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"github.com/ranveerkunal/memfs"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
 type arrayFlags []string
 func (i *arrayFlags) String() string {
-	return "my string representation"
+	return strings.Join(*i,",")
 }
 func (i *arrayFlags) Set(value string) error {
 	*i = append(*i, value)
 	return nil
 }
+
+type FSType string
+const (
+	DiskFS FSType = "diskfs"
+	INMem = "inmem"
+	INMemWithoutWatch = "inmem-nowatch"
+)
+var fsTypes = []FSType{DiskFS, INMem, INMemWithoutWatch}
+var invalidFSType = errors.New("Invalid filesystem type")
+func (i *FSType) String() string {
+	return string(*i)
+}
+func (i *FSType) Set(value string) error {
+	input := FSType(strings.ToLower(value))
+	for _, val := range fsTypes {
+		if val == input {
+			*i = val
+			return nil
+		}
+	}
+	return invalidFSType
+}
+
 var ports arrayFlags
 var directories arrayFlags
 var error404s arrayFlags
+var fsType = DiskFS
 
 func main() {
 	log.SetFlags(0)
 	flag.Var(&ports, "p", "ports to serve on (default: 8100)")
 	flag.Var(&directories, "d", "the directories of static files to host (default: ./)")
 	flag.Var(&error404s, "e", "the files to serve in case of error 404 (- to disable error404 handler)")
+	flag.Var(&fsType, "fs-type", "Which filesystem type to use. Options:\n" +
+		"* "+string(DiskFS)+"        Load files directly from disk (Kernel takes care of caching)\n" +
+		"* "+string(INMem)+"         Eagerly loads files from directories into memory and serves them from memory\n" +
+		"* "+string(INMemWithoutWatch)+" Same as "+string(INMem)+", but doesn't watch for changes (ideal for docker containers)\n")
 	logAccessFlag := flag.Bool("l", false, "log access requests")
 	error404VerboseFlag := flag.Bool("v", false, "log when handling error 404")
 	flag.Usage = func() {
@@ -69,7 +100,7 @@ func main() {
 		if error404File == "-" {
 			error404File = ""
 		}
-		servers = append(servers, serve(&done, port, directory, error404File, len(ports), *logAccessFlag, *error404VerboseFlag))
+		servers = append(servers, serve(&done, port, directory, error404File, len(ports), fsType, *logAccessFlag, *error404VerboseFlag))
 	}
 
 	// run until we get a signal
@@ -87,12 +118,20 @@ func main() {
 	log.Printf("Shutdown complete")
 }
 
-func serve(wg *sync.WaitGroup, port string, directory string, error404File string, numPorts int, logAccess bool, error404Verbose bool) *http.Server {
+func serve(wg *sync.WaitGroup, port string, directory string, error404File string, numPorts int, fsType FSType, logAccess bool, error404Verbose bool) *http.Server {
 	docroot, err := filepath.Abs(directory)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fs := justFilesFilesystem{http.Dir(docroot)}
+	var fs http.FileSystem
+	if fsType == INMem {
+		fs, err = memfs.NewWithWatch(docroot, true)
+	} else if fsType == INMemWithoutWatch {
+		fs, err = memfs.NewWithWatch(docroot, false)
+	} else {
+		fs = http.Dir(docroot)
+	}
+	fs = justFilesFilesystem{fs}
 
 	withError404 := ""
 	if error404File != "" {

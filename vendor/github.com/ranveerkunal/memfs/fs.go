@@ -106,7 +106,7 @@ func (fs *memFileSystem) walk() error {
 			return fmt.Errorf("failed to walk: %s with err: %v", fs.root, err)
 		}
 		if fi.IsDir() {
-			err = fs.watcher.Watch(path)
+			err = fs.watch(path)
 			if err != nil {
 				return fmt.Errorf("failed to add watch: %s err: %v", path, err)
 			}
@@ -114,6 +114,20 @@ func (fs *memFileSystem) walk() error {
 		return nil
 	})
 	return err
+}
+
+func (fs *memFileSystem) watch(path string) error {
+	if fs.watcher == nil {
+		return nil
+	}
+	return fs.watcher.Watch(path)
+}
+
+func (fs *memFileSystem) Close() error {
+	if fs.watcher == nil {
+		return nil
+	}
+	return fs.watcher.Close()
 }
 
 func (fs *memFileSystem) reloadFile(name string) os.FileInfo {
@@ -145,13 +159,16 @@ func (fs *memFileSystem) deleteFile(name string) os.FileInfo {
 }
 
 func (fs *memFileSystem) watcherCallback() {
+	if fs.watcher == nil {
+		return
+	}
 	for {
 		select {
 		case e := <-fs.watcher.Event:
 			if e.IsCreate() {
 				fi := fs.reloadFile(e.Name)
 				if fi != nil && fi.IsDir() {
-					err := fs.watcher.Watch(e.Name)
+					err := fs.watch(e.Name)
 					if err != nil {
 						logger.Printf("failed to add watch: %s err: %v", e.Name, err)
 					}
@@ -179,10 +196,19 @@ func (fs *memFileSystem) watcherCallback() {
 
 // New creates a new in memory filesystem at root.
 func New(root string) (http.FileSystem, error) {
+	return NewWithWatch(root, true)
+}
+
+// NewWithWatch creates a new in memory filesystem at root, we can specify whether we should watch for changes.
+func NewWithWatch(root string, watch bool) (http.FileSystem, error) {
 	root = path.Clean(root)
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create watcher: %v", err)
+	var watcher *fsnotify.Watcher
+	var err error
+	if watch {
+		watcher, err = fsnotify.NewWatcher()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create watcher: %v", err)
+		}
 	}
 
 	memFS := &memFileSystem{
