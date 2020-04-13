@@ -164,7 +164,10 @@ func (fs *memFileSystem) watcherCallback() {
 	}
 	for {
 		select {
-		case e := <-fs.watcher.Event:
+		case e, ok := <-fs.watcher.Event:
+			if !ok {
+				return
+			}
 			if e.IsCreate() {
 				fi := fs.reloadFile(e.Name)
 				if fi != nil && fi.IsDir() {
@@ -188,7 +191,10 @@ func (fs *memFileSystem) watcherCallback() {
 				}
 				fs.reloadFile(path.Dir(e.Name))
 			}
-		case err := <-fs.watcher.Error:
+		case err, ok := <-fs.watcher.Error:
+			if !ok {
+				return
+			}
 			logger.Printf("watcher error: %v", err)
 		}
 	}
