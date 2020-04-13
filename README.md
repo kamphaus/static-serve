@@ -1,5 +1,5 @@
 # static-serve
-Satic-serve is a very simple and efficient static file server written in Go.
+Static-serve is a very simple and efficient static file server written in Go.
 
 ```
 Usage:
