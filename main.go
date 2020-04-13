@@ -37,15 +37,19 @@ var error404s arrayFlags
 func main() {
 	log.SetFlags(0)
 	flag.Var(&ports, "p", "ports to serve on (default: 8100)")
-	flag.Var(&directories, "d", "ports to serve on (default: ./)")
+	flag.Var(&directories, "d", "the directories of static files to host (default: ./)")
 	flag.Var(&error404s, "e", "the files to serve in case of error 404 (- to disable error404 handler)")
 	logAccessFlag := flag.Bool("l", false, "log access requests")
 	error404VerboseFlag := flag.Bool("v", false, "log when handling error 404")
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+		log.Printf("Ports, directories and error404 flags can be specified multiple times, but need to be specified the same amount of times.")
+	}
 	flag.Parse()
 
 	if len(ports) != len(directories) || len(ports) != len(error404s) {
 		flag.Usage()
-		log.Printf("Ports, directories and error404 flags need to be specified the same amount of times.")
 		os.Exit(1)
 		return
 	}
