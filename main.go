@@ -71,7 +71,7 @@ func main() {
 		"* "+string(INMem)+"         Eagerly loads files from directories into memory and serves them from memory\n" +
 		"* "+string(INMemWithoutWatch)+" Same as "+string(INMem)+", but doesn't watch for changes (ideal for docker containers)\n")
 	logAccessFlag := flag.Bool("l", false, "log access requests")
-	error404VerboseFlag := flag.Bool("v", false, "log when handling error 404")
+	verboseFlag := flag.Bool("v", false, "verbose logging (e.g. when handling error 404)")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
@@ -90,6 +90,10 @@ func main() {
 		error404s = append(error404s, "-")
 	}
 
+	if *verboseFlag {
+		memfs.SetLogger(memfs.Verbose)
+	}
+
 	var servers []*http.Server
 	var done sync.WaitGroup
 	done.Add(len(ports))
@@ -100,7 +104,7 @@ func main() {
 		if error404File == "-" {
 			error404File = ""
 		}
-		servers = append(servers, serve(&done, port, directory, error404File, len(ports), fsType, *logAccessFlag, *error404VerboseFlag))
+		servers = append(servers, serve(&done, port, directory, error404File, len(ports), fsType, *logAccessFlag, *verboseFlag))
 	}
 
 	// run until we get a signal
