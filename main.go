@@ -118,14 +118,23 @@ func main() {
 	log.Printf("Shutdown complete")
 }
 
+type closeableFS interface {
+	http.FileSystem
+	Close() error
+}
+
 func serve(wg *sync.WaitGroup, port string, directory string, error404File string, numPorts int, fsType FSType, logAccess bool, error404Verbose bool) *http.Server {
 	docroot, err := filepath.Abs(directory)
 	if err != nil {
 		log.Fatal(err)
 	}
 	var fs http.FileSystem
+	var closeFS closeableFS
 	if fsType == INMem {
 		fs, err = memfs.NewWithWatch(docroot, true)
+		if closeableFS, ok := fs.(closeableFS); ok {
+			closeFS = closeableFS
+		}
 	} else if fsType == INMemWithoutWatch {
 		fs, err = memfs.NewWithWatch(docroot, false)
 	} else {
@@ -149,6 +158,10 @@ func serve(wg *sync.WaitGroup, port string, directory string, error404File strin
 		err := server.ListenAndServe()
 		if err != http.ErrServerClosed {
 			log.Printf("Encountered error: %v", err)
+		}
+		if closeFS != nil {
+			log.Printf("Closing FS watchers on " + directory)
+			closeFS.Close()
 		}
 	}()
 	return server
