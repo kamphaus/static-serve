@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func LogAccess(logAccessFlag bool, h http.Handler) http.Handler {
+func LogAccess(logAccessFlag bool, prefix string, h http.Handler) http.Handler {
 	if !logAccessFlag {
 		return h
 	}
@@ -40,6 +40,6 @@ func LogAccess(logAccessFlag bool, h http.Handler) http.Handler {
 		)
 		wrapped := httpsnoop.Wrap(w, hooks)
 		h.ServeHTTP(wrapped, r)
-		log.Printf("%s %d %d %s", r.RemoteAddr, httpCode, writtenBytes, r.URL.Path)
+		log.Printf("%s %d %d %s", r.RemoteAddr, httpCode, writtenBytes, prefix + r.URL.Path)
 	})
 }

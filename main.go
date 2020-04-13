@@ -64,7 +64,7 @@ func main() {
 		if error404File == "-" {
 			error404File = ""
 		}
-		servers = append(servers, serve(&done, port, directory, error404File, *logAccessFlag, *error404VerboseFlag))
+		servers = append(servers, serve(&done, port, directory, error404File, len(ports), *logAccessFlag, *error404VerboseFlag))
 	}
 
 	// run until we get a signal
@@ -82,7 +82,7 @@ func main() {
 	log.Printf("Shutdown complete")
 }
 
-func serve(wg *sync.WaitGroup, port string, directory string, error404File string, logAccess bool, error404Verbose bool) *http.Server {
+func serve(wg *sync.WaitGroup, port string, directory string, error404File string, numPorts int, logAccess bool, error404Verbose bool) *http.Server {
 	docroot, err := filepath.Abs(directory)
 	if err != nil {
 		log.Fatal(err)
@@ -94,7 +94,12 @@ func serve(wg *sync.WaitGroup, port string, directory string, error404File strin
 		withError404 = fmt.Sprintf(" with %s as error 404 file", error404File)
 	}
 	log.Printf("Serving %s on HTTP port: %s%s\n", docroot, port, withError404)
-	server := &http.Server{Addr: ":"+port, Handler: LogAccess(logAccess, HandleError404(&error404File, error404Verbose, http.StripPrefix("/", http.FileServer(fs))))}
+	listenAddr := ":" + port
+	logPrefix := listenAddr
+	if numPorts == 1 {
+		logPrefix = ""
+	}
+	server := &http.Server{Addr: listenAddr, Handler: LogAccess(logAccess, logPrefix, HandleError404(&error404File, error404Verbose, http.StripPrefix("/", http.FileServer(fs))))}
 	go func() {
 		defer func() { wg.Done() }()
 		err := server.ListenAndServe()

@@ -38,7 +38,7 @@ func TestDeactivatedLog(t *testing.T) {
 	tempDir := setupFS()
 	defer cleanTempDir(tempDir)
 
-	h := LogAccess(false, http.FileServer(justFilesFilesystem{http.Dir(tempDir)}))
+	h := LogAccess(false, "", http.FileServer(justFilesFilesystem{http.Dir(tempDir)}))
 
 	tests := []loggerTest{
 		{
@@ -94,7 +94,7 @@ func TestWithLogging(t *testing.T) {
 	tempDir := setupFS()
 	defer cleanTempDir(tempDir)
 
-	h := LogAccess(true, http.FileServer(justFilesFilesystem{http.Dir(tempDir)}))
+	h := LogAccess(true, "", http.FileServer(justFilesFilesystem{http.Dir(tempDir)}))
 
 	tests := []loggerTest{
 		{
