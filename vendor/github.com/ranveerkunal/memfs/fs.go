@@ -84,6 +84,7 @@ func (fs *memFileSystem) refreshCache(path string, info os.FileInfo) (err error)
 	if !fi.isDir {
 		fi.content, err = ioutil.ReadFile(path)
 		if err != nil {
+			logger.Printf("failed to load into cache: %s with err: %v", path, err)
 			return
 		}
 	}
