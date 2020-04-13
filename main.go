@@ -11,6 +11,7 @@ Static-serve does not show directory listings, it only serves files.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -73,9 +74,9 @@ func main() {
 	<-quit
 	log.Printf("Shutting down...")
 	for _, server := range servers {
-		err := server.Close()
+		err := server.Shutdown(context.Background())
 		if err != nil {
-			log.Printf("Encountered error: %v", err)
+			log.Printf("HTTP server Shutdown error: %v", err)
 		}
 	}
 	done.Wait()
