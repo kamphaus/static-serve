@@ -15,7 +15,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/ranveerkunal/memfs"
+	"github.com/kamphaus/memfs"
 	"log"
 	"net/http"
 	"os"
