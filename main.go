@@ -72,7 +72,7 @@ func main() {
 		"* "+string(INMemWithoutWatch)+" Same as "+string(INMem)+", but doesn't watch for changes (ideal for docker containers)\n")
 	logAccessFlag := flag.Bool("l", false, "log access requests")
 	verboseFlag := flag.Bool("v", false, "verbose logging (e.g. when handling error 404)")
-	healthPortFlag := flag.String("hport", "", "the port on which a /health endpoint should be published")
+	healthPortFlag := flag.String("hport", "", "the port on which /health and /ready endpoints should be served")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
