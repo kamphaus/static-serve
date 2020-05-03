@@ -72,6 +72,7 @@ func main() {
 		"* "+string(INMemWithoutWatch)+" Same as "+string(INMem)+", but doesn't watch for changes (ideal for docker containers)\n")
 	logAccessFlag := flag.Bool("l", false, "log access requests")
 	verboseFlag := flag.Bool("v", false, "verbose logging (e.g. when handling error 404)")
+	healthPortFlag := flag.String("hport", "", "the port on which a /health endpoint should be published")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
@@ -94,6 +95,12 @@ func main() {
 		memfs.SetLogger(memfs.Verbose)
 	}
 
+	serveHPort := *healthPortFlag != ""
+	if serveHPort {
+		log.Printf("Serving health endpoints on port: %s\n", *healthPortFlag)
+	}
+	hportServed := false
+
 	var servers []*http.Server
 	var done sync.WaitGroup
 	done.Add(len(ports))
@@ -104,7 +111,21 @@ func main() {
 		if error404File == "-" {
 			error404File = ""
 		}
-		servers = append(servers, serve(&done, port, directory, error404File, len(ports), fsType, *logAccessFlag, *verboseFlag))
+		servingHPort := serveHPort && port == *healthPortFlag
+		servers = append(servers, serve(&done, port, directory, error404File, len(ports), fsType, *logAccessFlag, *verboseFlag, servingHPort))
+		if servingHPort {
+			hportServed = true
+		}
+	}
+	if serveHPort && !hportServed {
+		done.Add(1)
+		hport := ":" + *healthPortFlag
+		servers = append(servers, startServer(
+			&done,
+			hport,
+			LogAccess(*logAccessFlag, hport, HandleHealthEndpoint(true, http.NotFoundHandler())),
+			nil,
+		))
 	}
 
 	// run until we get a signal
@@ -127,7 +148,7 @@ type closeableFS interface {
 	Close() error
 }
 
-func serve(wg *sync.WaitGroup, port string, directory string, error404File string, numPorts int, fsType FSType, logAccess bool, error404Verbose bool) *http.Server {
+func serve(wg *sync.WaitGroup, port string, directory string, error404File string, numPorts int, fsType FSType, logAccess bool, error404Verbose bool, serveHealth bool) *http.Server {
 	docroot, err := filepath.Abs(directory)
 	if err != nil {
 		log.Fatal(err)
@@ -156,16 +177,29 @@ func serve(wg *sync.WaitGroup, port string, directory string, error404File strin
 	if numPorts == 1 {
 		logPrefix = ""
 	}
-	server := &http.Server{Addr: listenAddr, Handler: LogAccess(logAccess, logPrefix, HandleError404(&error404File, error404Verbose, http.StripPrefix("/", http.FileServer(fs))))}
+	return startServer(
+		wg,
+		listenAddr,
+		LogAccess(logAccess, logPrefix, HandleHealthEndpoint(serveHealth, HandleError404(&error404File, error404Verbose, http.StripPrefix("/", http.FileServer(fs))))),
+		func() {
+			if closeFS != nil {
+				log.Printf("Closing FS watchers on " + directory)
+				closeFS.Close()
+			}
+		},
+	)
+}
+
+func startServer(wg *sync.WaitGroup, listenAddr string, handler http.Handler, onClose func()) *http.Server {
+	server := &http.Server{Addr: listenAddr, Handler: handler}
 	go func() {
 		defer func() { wg.Done() }()
 		err := server.ListenAndServe()
 		if err != http.ErrServerClosed {
 			log.Printf("Encountered error: %v", err)
 		}
-		if closeFS != nil {
-			log.Printf("Closing FS watchers on " + directory)
-			closeFS.Close()
+		if onClose != nil {
+			onClose()
 		}
 	}()
 	return server
