@@ -21,3 +21,7 @@ out of the box:
 * basic mime type detection
 * caching headers
 * range requests
+
+Not supported:
+* Serving over TLS
+* Dynamic pages (e.g. templating, changing response body, ...)
