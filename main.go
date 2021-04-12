@@ -94,6 +94,13 @@ func main() {
 
 	if *verboseFlag {
 		memfs.SetLogger(memfs.Verbose)
+		log.Printf("Verbose logging is activated\n")
+	}
+	if *logAccessFlag {
+		log.Printf("Access logging is activated\n")
+	}
+	if *logHeadersFlag {
+		log.Printf("Request / response logging is activated\n")
 	}
 
 	serveHPort := *healthPortFlag != ""

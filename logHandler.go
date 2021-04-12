@@ -67,10 +67,10 @@ func LogReqResponse(logReqResponse bool, postfix string, h http.Handler) http.Ha
 		)
 		wrapped := httpsnoop.Wrap(w, hooks)
 		reqHeaders, _ := httputil.DumpRequest(r, false)
-		log.Printf("%s %s", reqId, reqHeaders)
+		log.Printf(">>> %s %s", reqId, reqHeaders)
 		h.ServeHTTP(wrapped, r)
 		var b bytes.Buffer
 		_ = wrapped.Header().WriteSubset(&b, map[string]bool{})
-		log.Printf("%s %d %s", reqId, respCode, b.String())
+		log.Printf("<<< %s %d %s\n", reqId, respCode, b.String())
 	})
 }
