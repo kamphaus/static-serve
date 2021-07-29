@@ -76,7 +76,7 @@ func main() {
 	verboseFlag := flag.Bool("v", false, "verbose logging (e.g. when handling error 404)")
 	tlsCertFlag := flag.String("tls-cert", "", "path to a TLS certificate")
 	tlsKeyFlag := flag.String("tls-key", "", "path to the key of the TLS certificate")
-	versionFlag := flag.Bool("version", false, "print the version")
+	versionFlag := flag.Bool("version", false, "print the version and exit")
 	healthPortFlag := flag.String("hport", "", "the port on which /health and /ready endpoints should be served")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])

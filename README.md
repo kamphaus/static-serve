@@ -16,6 +16,8 @@ Usage:
 	-v: verbose logging (e.g. when handling error 404)
 	    Ports, directories and error404 flags can be specified multiple times,
 	    but need to be specified the same amount of times.
+	-version
+	    print the version and exit
 ```
 
 Static-serve does not show directory listings, it only serves files.
@@ -26,7 +28,7 @@ out of the box:
 * caching headers
 * range requests
 
-It's possible to serve over TLS by  specifying both --tls-cert and --tls-key file paths.
+It's possible to serve over TLS by specifying both `--tls-cert` and `--tls-key` file paths.
 
 Not supported:
 * Dynamic pages (e.g. templating, changing response body, ...).
