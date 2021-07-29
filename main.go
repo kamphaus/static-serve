@@ -12,6 +12,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
@@ -73,6 +74,8 @@ func main() {
 	logAccessFlag := flag.Bool("l", false, "log access requests")
 	logHeadersFlag := flag.Bool("r", false, "log request/response headers")
 	verboseFlag := flag.Bool("v", false, "verbose logging (e.g. when handling error 404)")
+	tlsCertFlag := flag.String("tls-cert", "", "path to a TLS certificate")
+	tlsKeyFlag := flag.String("tls-key", "", "path to the key of the TLS certificate")
 	versionFlag := flag.Bool("version", false, "print the version")
 	healthPortFlag := flag.String("hport", "", "the port on which /health and /ready endpoints should be served")
 	flag.Usage = func() {
@@ -108,6 +111,7 @@ func main() {
 	if *logHeadersFlag {
 		log.Printf("Request / response logging is activated\n")
 	}
+	tlsConfig := loadTlsConfig(*verboseFlag, *tlsCertFlag, *tlsKeyFlag)
 
 	serveHPort := *healthPortFlag != ""
 	if serveHPort {
@@ -126,7 +130,7 @@ func main() {
 			error404File = ""
 		}
 		servingHPort := serveHPort && port == *healthPortFlag
-		servers = append(servers, serve(&done, port, directory, error404File, len(ports), fsType, *logAccessFlag, *logHeadersFlag, *verboseFlag, servingHPort))
+		servers = append(servers, serve(&done, port, directory, tlsConfig, error404File, len(ports), fsType, *logAccessFlag, *logHeadersFlag, *verboseFlag, servingHPort))
 		if servingHPort {
 			hportServed = true
 		}
@@ -137,6 +141,7 @@ func main() {
 		servers = append(servers, startServer(
 			&done,
 			hport,
+			tlsConfig,
 			LogAccess(*logAccessFlag, hport, HandleHealthEndpoint(true, http.NotFoundHandler())),
 			nil,
 		))
@@ -162,7 +167,7 @@ type closeableFS interface {
 	Close() error
 }
 
-func serve(wg *sync.WaitGroup, port string, directory string, error404File string, numPorts int, fsType FSType, logAccess bool, logHeadersFlag bool, error404Verbose bool, serveHealth bool) *http.Server {
+func serve(wg *sync.WaitGroup, port string, directory string, tlsConfig *tls.Config, error404File string, numPorts int, fsType FSType, logAccess bool, logHeadersFlag bool, error404Verbose bool, serveHealth bool) *http.Server {
 	docroot, err := filepath.Abs(directory)
 	if err != nil {
 		log.Fatal(err)
@@ -194,6 +199,7 @@ func serve(wg *sync.WaitGroup, port string, directory string, error404File strin
 	return startServer(
 		wg,
 		listenAddr,
+		tlsConfig,
 		LogAccess(logAccess, logPrefix, LogReqResponse(logHeadersFlag, logPrefix, HandleHealthEndpoint(serveHealth, HandleError404(&error404File, error404Verbose, http.StripPrefix("/", http.FileServer(fs)))))),
 		func() {
 			if closeFS != nil {
@@ -204,11 +210,17 @@ func serve(wg *sync.WaitGroup, port string, directory string, error404File strin
 	)
 }
 
-func startServer(wg *sync.WaitGroup, listenAddr string, handler http.Handler, onClose func()) *http.Server {
-	server := &http.Server{Addr: listenAddr, Handler: handler}
+func startServer(wg *sync.WaitGroup, listenAddr string, tlsConfig *tls.Config, handler http.Handler, onClose func()) *http.Server {
+	server := &http.Server{Addr: listenAddr, TLSConfig: tlsConfig, Handler: handler}
 	go func() {
 		defer func() { wg.Done() }()
-		err := server.ListenAndServe()
+		var err error
+		if tlsConfig == nil {
+			err = server.ListenAndServe()
+		} else {
+			// certFile and keyFile are empty, since the certificate is passed in the server TLSConfig
+			err = server.ListenAndServeTLS("", "")
+		}
 		if err != http.ErrServerClosed {
 			log.Printf("Encountered error: %v", err)
 		}

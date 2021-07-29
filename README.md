@@ -9,9 +9,13 @@ Usage:
 	-l: log access requests
 	-hport: the port on which /health and /ready endpoints should be served
 	-r	log request/response headers
+	-tls-cert string
+		path to a TLS certificate
+	-tls-key string
+		path to the key of the TLS certificate
 	-v: verbose logging (e.g. when handling error 404)
-Ports, directories and error404 flags can be specified multiple times,
-but need to be specified the same amount of times.
+	    Ports, directories and error404 flags can be specified multiple times,
+	    but need to be specified the same amount of times.
 ```
 
 Static-serve does not show directory listings, it only serves files.
@@ -22,7 +26,8 @@ out of the box:
 * caching headers
 * range requests
 
+It's possible to serve over TLS by  specifying both --tls-cert and --tls-key file paths.
+
 Not supported:
-* Serving over TLS
 * Dynamic pages (e.g. templating, changing response body, ...).
   It's called static-serve for a reason 😉
