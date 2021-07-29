@@ -1,9 +1,0 @@
-# .goreleaser.yml
-builds:
-  # You can have multiple builds defined as a yaml list
-  -
-    # Custom flags templates.
-    # Default is empty.
-    flags:
-      - -X main.Version={{.Env.SSVERSION}}
-      - -X main.BuildDate={{.Env.BUILDDATE}}

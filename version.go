@@ -7,15 +7,21 @@ import (
 
 var (
 	// Version holds the current version of static-serve.
-	Version = "dev"
+	version = "dev"
+	// Commit holds the commit used to build static-serve.
+	commit = "abcde123"
 	// BuildDate holds the build date of static-serve.
-	BuildDate = "I don't remember exactly"
+	date = "I don't remember exactly"
+	// BuiltBy holds who built static-serve.
+	builtBy = "someone"
 )
 
 func printVersion() {
-	log.Printf("  Version:   " + Version +
-		"\n  GoVersion: " + runtime.Version() +
-		"\n  BuildTime: " + BuildDate +
-		"\n  OS:        " + runtime.GOOS +
-		"\n  Arch:      " + runtime.GOARCH + "\n")
+	log.Printf("  Version:    " + version +
+		"\n  GoVersion:  " + runtime.Version() +
+		"\n  Commit:     " + commit +
+		"\n  Build time: " + date +
+		"\n  Built by:   " + builtBy +
+		"\n  OS:         " + runtime.GOOS +
+		"\n  Arch:       " + runtime.GOARCH + "\n")
 }
