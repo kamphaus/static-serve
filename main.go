@@ -76,6 +76,7 @@ func main() {
 	verboseFlag := flag.Bool("v", false, "verbose logging (e.g. when handling error 404)")
 	tlsCertFlag := flag.String("tls-cert", "", "path to a TLS certificate")
 	tlsKeyFlag := flag.String("tls-key", "", "path to the key of the TLS certificate")
+	versionFlag := flag.Bool("version", false, "print the version")
 	healthPortFlag := flag.String("hport", "", "the port on which /health and /ready endpoints should be served")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -83,6 +84,11 @@ func main() {
 		log.Printf("Ports, directories and error404 flags can be specified multiple times, but need to be specified the same amount of times.")
 	}
 	flag.Parse()
+
+	if *versionFlag {
+		printVersion()
+		return
+	}
 
 	if len(ports) != len(directories) || len(ports) != len(error404s) {
 		flag.Usage()

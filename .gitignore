@@ -20,3 +20,5 @@ logs
 **/.nb-gradle-properties
 */.settings
 /static-serve
+
+dist/
